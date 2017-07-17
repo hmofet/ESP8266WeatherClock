@@ -6,7 +6,8 @@
  * Released under BSD licence
  * 
  * The clock is hardcoded for Eastern Standard Time (defaults to Daylight Saving Time, switchable
- * at run-time by navigating to the webserver)
+ * at run-time by navigating to the webserver). Change of one line of code would allow end-user
+ * to change time zone offset from UTC to any arbitrary number, using GET parameter in URL
  * 
  * Designed to be run with an Adafruit-compatible SSD1306 OLED 128x64 display connected through I2C
  * Designed to be run on a NodeMCU devkit, could be adapted for other ESP8266-based boards
@@ -16,6 +17,13 @@
  * 
  * Weather data pulled from OpenWeatherMap API. Please use your own API key (registration for basic account is free)
  * 
+ * For OLED I2C wiring: 
+ * OLED         NodeMCU
+ * ----         ------- 
+ * SCL (clock)  -> D1
+ * SDA (data)   -> D2
+ * VCC (3.3V)   -> 3V
+ * GND          -> G
  * 
  */
 
@@ -508,10 +516,13 @@ unsigned long webUnixTime (Client &client)
   client.flush();
   client.stop();
 
-  //convert from UTC to EST/EDT
+  // convert from UTC to EST/EDT
+  // remove conditional and change to: "time -= tzOffset * 60 * 60;" for 
+  // arbitrary timezone offset. 
+  // Be sure to danitize input to prevent buffer overflow!
   if(tzOffset == -4){
     time -= 14400;
-  } else {
+  } else if (tzOffset == -5) { 
     time -= 18000;
   }
 
