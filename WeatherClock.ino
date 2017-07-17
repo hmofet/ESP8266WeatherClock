@@ -280,8 +280,6 @@ String calculateTime(){
 
   String time = "";
   short hr = hourFormat12();
-r - 12 + tzOffset;
-  }*/
 
   time = String(hr) + ":";
 
