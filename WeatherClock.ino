@@ -5,9 +5,8 @@
  * by Arin Bakht (www.github.com/hmofet)
  * Released under BSD licence
  * 
- * The clock is hardcoded for Eastern Standard Time (defaults to Daylight Saving Time, switchable
- * at run-time by navigating to the webserver). Change of one line of code would allow end-user
- * to change time zone offset from UTC to any arbitrary number, using GET parameter in URL
+ * The website is hardcoded for Eastern Standard Time (defaults to Daylight Saving Time, switchable
+ * at run-time), but time zone offset from UTC can be set to anything by changing GET parameter in URL
  * 
  * Designed to be run with an Adafruit-compatible SSD1306 OLED 128x64 display connected through I2C
  * Designed to be run on a NodeMCU devkit, could be adapted for other ESP8266-based boards
@@ -97,7 +96,6 @@ typedef struct {
 
 int tzOffset = -4;
 int hits = 0;
-time_t currentTime;
 ESP8266WebServer server(80);
 Forecast forecast;
 
@@ -151,10 +149,8 @@ void setup()   {
   }
 
   //webUnixTime function requires wificlient to be passed to it
-  static WiFiClient client;
-  currentTime = webUnixTime(client);
-  
-  setTime(currentTime);
+  WiFiClient client;
+  setTime(webUnixTime(client));
                    
    //begin listening on DNS
   if (MDNS.begin("esp8266")) {
@@ -180,9 +176,8 @@ void loop() {
 
       
         HTTPClient http;
-        static WiFiClient client;
 
-        http.begin("http://api.openweathermap.org/data/2.5/weather?q=Toronto&units=metric&APPID=[INSERT_API_KEY_HERE]"); //HTTP
+        http.begin("http://api.openweathermap.org/data/2.5/weather?q=Toronto&units=metric&APPID=[INSERT_API_KEY]"); //HTTP
         
         // start connection and send HTTP header
         int httpCode = http.GET();
@@ -315,13 +310,12 @@ String calculateTime(){
 //seconds to days/hrs/minutes/seconds code courtesy user Przemek, stackoverflow,
 //https://stackoverflow.com/questions/2419562/convert-seconds-to-days-minutes-and-seconds
 String uptime(){
-     
-  unsigned long input_millis = millis() / MILLIS_IN_SECOND;
-
-  unsigned long days = input_millis / SECONDS_IN_DAY;
-  unsigned long hours = (input_millis % SECONDS_IN_DAY) / SECONDS_IN_HOUR;
-  unsigned long minutes = ((input_millis % SECONDS_IN_DAY) % SECONDS_IN_HOUR) / SECONDS_IN_MINUTE;
-  unsigned long seconds = (((input_millis % SECONDS_IN_DAY) % SECONDS_IN_HOUR) % SECONDS_IN_MINUTE) / SECONDS;
+  
+  unsigned long input_seconds = millis() / MILLIS_IN_SECOND;
+  unsigned long days = input_seconds / SECONDS_IN_DAY;
+  unsigned long hours = (input_seconds % SECONDS_IN_DAY) / SECONDS_IN_HOUR;
+  unsigned long minutes = ((input_seconds % SECONDS_IN_DAY) % SECONDS_IN_HOUR) / SECONDS_IN_MINUTE;
+  unsigned long seconds = (((input_seconds % SECONDS_IN_DAY) % SECONDS_IN_HOUR) % SECONDS_IN_MINUTE) / SECONDS;
 
   String uptime = "Uptime: " + String(days) + "d " + String(hours) + "h " + String(minutes) + "m " + String(seconds) + "s";
   
@@ -371,9 +365,8 @@ void handleRoot() {
   //otherwise will reset time to UTC since tzOffset is null
   if(server.arg("tz") != NULL){
     tzOffset = server.arg("tz").toInt();
-    static WiFiClient client;
-    currentTime = webUnixTime(client);
-    setTime(currentTime);
+    WiFiClient client;
+    setTime(webUnixTime(client));
   }
   
 
@@ -517,15 +510,8 @@ unsigned long webUnixTime (Client &client)
   client.stop();
 
   // convert from UTC to EST/EDT
-  // remove conditional and change to: "time -= tzOffset * 60 * 60;" for 
-  // arbitrary timezone offset. 
-  // Be sure to danitize input to prevent buffer overflow!
-  if(tzOffset == -4){
-    time -= 14400;
-  } else if (tzOffset == -5) { 
-    time -= 18000;
-  }
-
+  time += tzOffset * 60 * 60;
+  
   return time;
 }
 
