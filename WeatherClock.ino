@@ -174,7 +174,7 @@ void loop() {
         HTTPClient http;
         static WiFiClient client;
 
-        http.begin("http://api.openweathermap.org/data/2.5/weather?q=Toronto&units=metric&APPID=[INSERT_YOUR_API_KEY_HERE"); //HTTP
+        http.begin("http://api.openweathermap.org/data/2.5/weather?q=Toronto&units=metric&APPID=[INSERT_API_KEY_HERE]"); //HTTP
         
         // start connection and send HTTP header
         int httpCode = http.GET();
@@ -275,22 +275,13 @@ void printForecast(String message, const char* value, String units, bool forecas
 
 }
 
-//used to convert from UTC to EST/EDT, will also concat minutes and seconds, and AM/PM in 12hr clock
+//print time nicely
 String calculateTime(){
 
   String time = "";
-  short hr = hour();
-  if(hr < 13 && hr > abs(tzOffset)){
-    hr = hr + tzOffset;
-  } else if (hr == 0){
-    hr = 12 - tzOffset;
-  } else if (hr > 0 && hr < abs(tzOffset)) {
-    hr = hr + 12 + tzOffset;
-  } else if (hr == abs(tzOffset)){
-    hr = 12;
-  } else {
-    hr = hr - 12 + tzOffset;
-  }
+  short hr = hourFormat12();
+r - 12 + tzOffset;
+  }*/
 
   time = String(hr) + ":";
 
@@ -372,8 +363,13 @@ void handleRoot() {
   
   //if GET param is not set, don't change time zone offset,
   //otherwise will reset time to UTC since tzOffset is null
-  if(server.arg("tz") != NULL)
+  if(server.arg("tz") != NULL){
     tzOffset = server.arg("tz").toInt();
+    static WiFiClient client;
+    currentTime = webUnixTime(client);
+    setTime(currentTime);
+  }
+  
 
   //increment hit counter
   ++hits;
@@ -514,7 +510,13 @@ unsigned long webUnixTime (Client &client)
   client.flush();
   client.stop();
 
+  //convert from UTC to EST/EDT
+  if(tzOffset == -4){
+    time -= 14400;
+  } else {
+    time -= 18000;
+  }
+
   return time;
 }
-
 
